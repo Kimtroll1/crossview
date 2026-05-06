@@ -32,21 +32,19 @@ AI가 정답을 대신 말하는 것이 아니라, 사용자가 **스스로 판�
 crossview/
 ├── GEMINI.md              # Gemini CLI 컨텍스트 파일
 ├── README.md              # 이 파일
-├── index.html             # 웹 데모 진입점
-├── src/
-│   ├── api/
-│   │   ├── gemini.js      # Gemini API 호출 (요약·분석·관점 생성)
-│   │   └── youtube.js     # YouTube Data API / 자막 추출
-│   ├── components/
-│   │   ├── SignalCard.js       # 가짜정보 의심 신호 UI
-│   │   ├── BiasChart.js        # 편향성 분석 시각화
-│   │   ├── PerspectiveCard.js  # 다른 관점 제시
-│   │   └── CheckList.js        # 판단 체크리스트
-│   └── utils/
-│       └── parser.js      # URL 파싱, 데이터 정제
-├── extension/             # 크롬 확장 (다음 버전)
+├── .env                   # API 키 (절대 커밋 금지)
+├── shared/                # 공통 로직 — 데모·확장 모두 사용
+│   ├── gemini.js          # Gemini API 호출 (분석·요약·관점 생성)
+│   ├── youtube.js         # YouTube Data API / 자막 추출
+│   └── parser.js          # URL 파싱, 데이터 정제
+├── demo/                  # 웹 데모 (MVP — 지금 작업하는 곳)
+│   ├── index.html
+│   ├── style.css
+│   └── app.js             # shared/ 가져다 씀
+├── extension/             # 크롬 확장 (다음 버전 — 지금은 비워둬도 됨)
 │   ├── manifest.json
-│   └── content.js
+│   ├── content.js         # shared/ 가져다 씀
+│   └── popup.html
 └── docs/
     ├── crossview_onepager.html
     └── CrossView_Deck.pptx
