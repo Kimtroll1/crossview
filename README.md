@@ -26,106 +26,17 @@ AI가 정답을 대신 말하는 것이 아니라, 사용자가 **스스로 판�
 
 ---
 
-## 🗂 프로젝트 구조
-
-```
-crossview/
-├── GEMINI.md              # Gemini CLI 컨텍스트 파일
-├── README.md              # 이 파일
-├── index.html             # 웹 데모 진입점
-├── src/
-│   ├── api/
-│   │   ├── gemini.js      # Gemini API 호출 (요약·분석·관점 생성)
-│   │   └── youtube.js     # YouTube Data API / 자막 추출
-│   ├── components/
-│   │   ├── SignalCard.js       # 가짜정보 의심 신호 UI
-│   │   ├── BiasChart.js        # 편향성 분석 시각화
-│   │   ├── PerspectiveCard.js  # 다른 관점 제시
-│   │   └── CheckList.js        # 판단 체크리스트
-│   └── utils/
-│       └── parser.js      # URL 파싱, 데이터 정제
-├── extension/             # 크롬 확장 (다음 버전)
-│   ├── manifest.json
-│   └── content.js
-└── docs/
-    ├── crossview_onepager.html
-    └── CrossView_Deck.pptx
-```
-
----
-
-## 🚀 시작하기
-
-### 요구 사항
-
-- Node.js 18 이상
-- Gemini API 키 ([Google AI Studio](https://aistudio.google.com)에서 발급)
-- YouTube Data API v3 키 ([Google Cloud Console](https://console.cloud.google.com)에서 발급)
-
-### 설치
-
-```bash
-git clone https://github.com/your-team/crossview.git
-cd crossview
-npm install
-```
-
-### 환경 변수 설정
-
-`.env` 파일을 루트에 생성한다.
-
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-YOUTUBE_API_KEY=your_youtube_api_key_here
-```
-
-> ⚠️ API 키는 절대 코드에 직접 넣지 말 것. `.env`는 `.gitignore`에 포함되어 있다.
-
-### 실행
-
-```bash
-npm run dev
-```
-
-브라우저에서 `http://localhost:3000` 접속 후 유튜브 URL을 입력하면 분석이 시작된다.
+## 이번주 해야할거!!!
+2026-05-01 멘토링 토대로 GEMINI.md README.md 갈기 test.html 갈기
 
 ---
 
 ## 🔍 사용 방법
 
-1. 분석하고 싶은 유튜브 영상의 URL을 복사한다
-2. CrossView 입력창에 붙여넣는다
-3. 분석 결과 확인
-   - 🔴 의심 신호가 감지된 표현 하이라이트
-   - 📊 편향 유형 및 강도 시각화
-   - 🔄 같은 이슈를 다른 시각으로 보는 2~3문장 요약
-   - ✅ 스스로 확인할 수 있는 체크리스트
+1. 
 
 ---
 
-## 🛠 기술 스택
-
-| 구분 | 기술 |
-|---|---|
-| Frontend | HTML / CSS / JavaScript (또는 React) |
-| AI 분석 | Gemini API (`gemini-2.0-flash`) |
-| 영상 데이터 | YouTube Data API v3 |
-| 자막 추출 | YouTube Transcript API |
-| 다음 버전 | Chrome Extension Manifest V3 |
-
----
-
-## 📋 MVP 구현 범위
-
-- [x] YouTube URL 파싱 및 메타데이터 추출
-- [ ] Gemini API 연동 — 의심 신호 감지 프롬프트
-- [ ] Gemini API 연동 — 편향성 분석 프롬프트
-- [ ] Gemini API 연동 — 다른 관점 생성 프롬프트
-- [ ] 판단 체크리스트 UI
-- [ ] 웹 데모 통합 테스트
-- [ ] 크롬 확장 포팅 (다음 버전)
-
----
 
 ## 🗺 로드맵
 
