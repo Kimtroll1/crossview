@@ -53,21 +53,19 @@
 crossview/
 ├── GEMINI.md              # 이 파일
 ├── README.md
-├── index.html             # 웹 데모 진입점
-├── src/
-│   ├── api/
-│   │   ├── gemini.js      # Gemini API 호출
-│   │   └── youtube.js     # YouTube Data API / 자막 추출
-│   ├── components/
-│   │   ├── SummaryCard.js     # 핵심 주장 요약 UI
-│   │   ├── PersuasionTags.js  # 설득 기법 라벨
-│   │   ├── CommentChart.js    # 댓글 찬반 분포 시각화
-│   │   └── OtherPerspective.js # 다른 관점 제시
-│   └── utils/
-│       └── parser.js      # URL 파싱, 데이터 정제
-├── extension/             # 크롬 확장 (다음 버전)
+├── .env                   # API 키 (절대 커밋 금지)
+├── shared/                # 공통 로직 — 데모·확장 모두 사용
+│   ├── gemini.js          # Gemini API 호출 (분석·요약·관점 생성)
+│   ├── youtube.js         # YouTube Data API / 자막 추출
+│   └── parser.js          # URL 파싱, 데이터 정제
+├── demo/                  # 웹 데모 (MVP — 지금 작업하는 곳)
+│   ├── index.html
+│   ├── style.css
+│   └── app.js             # shared/ 가져다 씀
+├── extension/             # 크롬 확장 (다음 버전 — 지금은 비워둬도 됨)
 │   ├── manifest.json
-│   └── content.js
+│   ├── content.js         # shared/ 가져다 씀
+│   └── popup.html
 └── docs/
     ├── crossview_onepager.html
     └── CrossView_Deck.pptx
@@ -100,13 +98,36 @@ crossview/
 
 ---
 
-## 코딩 컨벤션 및 주의사항
+## 코딩 주의사항
 
-- **언어:** JavaScript (또는 TypeScript)
-- **API 키:** 환경변수로 관리 (`.env`), 절대 하드코딩 금지
-- **에러 처리:** YouTube 자막 없는 영상, 댓글 비활성화 영상 케이스 반드시 처리
-- **YouTube API 할당량:** Data API v3 일일 할당량(10,000 units) 주의, 댓글 수집은 최대 상위 50개로 제한
-- **응답 언어:** Gemini 프롬프트에 항상 "한국어로 응답해줘" 명시
+### 절대 규칙 (어기지 말 것)
+
+- API 키는 반드시 `.env`로 관리한다. 코드에 직접 넣으면 안 된다
+- 파일 수정 전에 반드시 기존 코드를 먼저 읽는다. 읽지 않고 덮어쓰지 않는다
+- 하나의 작업이 끝나면 바로 다음으로 넘어가지 말고, 브라우저에서 직접 확인한다
+- `shared/`의 함수를 수정할 때는 `demo/`와 `extension/` 양쪽에 영향을 주는지 먼저 확인한다
+
+### 코드 스타일
+
+- 변수명은 camelCase, 함수명은 camelCase, 파일명은 camelCase
+- 함수 하나는 하나의 역할만 한다. 길어지면 쪼갠다
+- 주석은 "무엇을 하는지"가 아니라 "왜 이렇게 했는지"를 적는다
+- 응답 언어: Gemini 프롬프트에는 항상 `"한국어로 응답해줘"` 명시
+
+### 에러 처리 (반드시 처리할 케이스)
+
+- YouTube 자막이 없는 영상
+- 댓글이 비활성화된 영상
+- 유튜브가 아닌 URL 입력
+- Gemini API 응답 지연 또는 실패
+- YouTube API 일일 할당량(10,000 units) 초과
+
+### 작업 방식
+
+- 한 번에 너무 많이 바꾸지 않는다. 기능 하나씩 완성하고 확인한다
+- 뭔가 잘못됐다고 느끼면 즉시 멈추고 되돌린다. 계속 덮어씌우지 않는다
+- 잘 모르겠으면 일단 물어본다. 혼자 추측해서 만들지 않는다
+- AI가 이상한 코드를 짜면 그 규칙을 이 파일에 추가한다
 
 ---
 

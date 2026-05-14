@@ -26,8 +26,68 @@ AI가 정답을 대신 말하는 것이 아니라, 사용자가 **스스로 판�
 
 ---
 
-## 이번주 해야할거!!!
-2026-05-01 멘토링 토대로 GEMINI.md README.md 갈기 test.html 갈기
+## 🗂 프로젝트 구조
+
+```
+crossview/
+├── GEMINI.md              # Gemini CLI 컨텍스트 파일
+├── README.md              # 이 파일
+├── index.html             # 웹 데모 진입점
+├── src/
+│   ├── api/
+│   │   ├── gemini.js      # Gemini API 호출 (요약·분석·관점 생성)
+│   │   └── youtube.js     # YouTube Data API / 자막 추출
+│   ├── components/
+│   │   ├── SignalCard.js       # 가짜정보 의심 신호 UI
+│   │   ├── BiasChart.js        # 편향성 분석 시각화
+│   │   ├── PerspectiveCard.js  # 다른 관점 제시
+│   │   └── CheckList.js        # 판단 체크리스트
+│   └── utils/
+│       └── parser.js      # URL 파싱, 데이터 정제
+├── extension/             # 크롬 확장 (다음 버전)
+│   ├── manifest.json
+│   └── content.js
+└── docs/
+    ├── crossview_onepager.html
+    └── CrossView_Deck.pptx
+```
+
+---
+
+## 🚀 시작하기
+
+### 요구 사항
+
+- Node.js 18 이상
+- Gemini API 키 ([Google AI Studio](https://aistudio.google.com)에서 발급)
+- YouTube Data API v3 키 ([Google Cloud Console](https://console.cloud.google.com)에서 발급)
+
+### 설치
+
+```bash
+git clone https://github.com/your-team/crossview.git
+cd crossview
+npm install
+```
+
+### 환경 변수 설정
+
+`.env` 파일을 루트에 생성한다.
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+YOUTUBE_API_KEY=your_youtube_api_key_here
+```
+
+> ⚠️ API 키는 절대 코드에 직접 넣지 말 것. `.env`는 `.gitignore`에 포함되어 있다.
+
+### 실행
+
+```bash
+npm run dev
+```
+
+브라우저에서 `http://localhost:3000` 접속 후 유튜브 URL을 입력하면 분석이 시작된다.
 
 ---
 
