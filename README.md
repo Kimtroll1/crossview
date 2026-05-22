@@ -1,31 +1,32 @@
 # CrossView
 > **내 생각, 내가 지킨다**
-# CrossView
 
-> 내 생각, 내가 지킨다
-> 유튜브 뉴스 시청 중 편향과 설득 구조를 감지하고,
-> 다른 관점과 검증 질문을 제시해 사용자가 스스로 판단하도록 돕는 **크롬 확장 기반 미디어 리터러시 도구**
----
-
-## 🧩 프로젝트 소개
-
-유튜브에서 시사 영상을 보다 보면, 어느 순간 영상의 프레임에 끌려가고 있다는 느낌을 받는다.  
-자극적인 제목, 한쪽으로 기운 편집, 댓글 분위기가 조용히 판단을 흔든다.  
-그 과정이 너무 자연스러워서, **내가 설득당하고 있다는 사실조차 인식하기 어렵다.**
-
-CrossView는 그 "넘기는 순간"을 포착해, 시청 흐름을 깨지 않고 즉시 작동한다.  
-AI가 정답을 대신 말하는 것이 아니라, 사용자가 **스스로 판단하도록** 실시간으로 돕는다.
+CrossView는 유튜브 뉴스 및 시사 시청 중 발생할 수 있는 편향과 설득 구조를 실시간으로 감지하고, AI 기반의 다각도 분석과 다른 관점의 정보를 제공하여 사용자의 미디어 리터러시를 돕는 **크롬 확장 프로그램**입니다.
 
 ---
 
 ## ✨ 핵심 기능
 
-| 기능 | 설명 |
-|---|---|
-| 🔴 **가짜정보 의심 신호 감지** | 출처 불명, 과장 표현, 검증 부족 표현을 실시간으로 표시 |
-| 📊 **편향성 분석** | 감정 쏠림, 진영 편향, 댓글 흐름의 극단적 쏠림 감지 |
-| 🔄 **다른 관점 제안** | 반대 시각, 추가 확인 질문, 관련 키워드 제공 |
-| ✅ **판단 체크리스트** | 누가 말했는가 / 근거가 있는가 / 다른 출처도 같은가 확인 유도 |
+- 🔍 **실시간 편향성 분석**: 영상 스크립트와 댓글을 분석하여 감정 쏠림 및 정치적 편향도를 시각화합니다.
+- 🤖 **AI 분석 및 요약**: Gemini AI를 활용해 영상의 핵심 내용을 요약하고 논리적 허점이나 의심 신호를 포착합니다.
+- 💬 **댓글 흐름 분석**: 현재 로드된 댓글의 전반적인 반응과 여론의 쏠림 현상을 분석합니다.
+- 🔄 **다른 관점 및 검증 제안**: 시청 중인 영상과 다른 시각의 기사, 유튜브 영상, 또는 비판적 사고를 위한 질문을 제시합니다.
+- 🌓 **다크/라이트 모드 지원**: 유튜브 테마에 맞춘 자연스러운 UI를 제공합니다.
+
+---
+
+## 🛠 기술 스택
+
+### Backend
+- **Language**: Python 3.10+
+- **Framework**: FastAPI
+- **AI**: Google Gemini (GenAI SDK)
+- **Deployment**: Render (준비됨)
+
+### Extension
+- **Manifest**: V3
+- **Frontend**: Vanilla JS, CSS
+- **API Communication**: Fetch API
 
 ---
 
@@ -33,92 +34,85 @@ AI가 정답을 대신 말하는 것이 아니라, 사용자가 **스스로 판�
 
 ```
 crossview/
-├── GEMINI.md              # Gemini CLI 컨텍스트 파일
-├── README.md              # 이 파일
-├── index.html             # 웹 데모 진입점
-├── src/
-│   ├── api/
-│   │   ├── gemini.js      # Gemini API 호출 (요약·분석·관점 생성)
-│   │   └── youtube.js     # YouTube Data API / 자막 추출
-│   ├── components/
-│   │   ├── SignalCard.js       # 가짜정보 의심 신호 UI
-│   │   ├── BiasChart.js        # 편향성 분석 시각화
-│   │   ├── PerspectiveCard.js  # 다른 관점 제시
-│   │   └── CheckList.js        # 판단 체크리스트
-│   └── utils/
-│       └── parser.js      # URL 파싱, 데이터 정제
-├── extension/             # 크롬 확장 (다음 버전)
-│   ├── manifest.json
-│   └── content.js
-└── docs/
-    ├── crossview_onepager.html
-    └── CrossView_Deck.pptx
+├── backend/               # FastAPI 기반 분석 서버
+│   ├── app/
+│   │   ├── routes/        # API 엔드포인트 (analyze)
+│   │   ├── schemas/       # Pydantic 데이터 모델
+│   │   ├── services/      # AI 연동 및 비즈니스 로직
+│   │   └── main.py        # 서버 진입점
+│   └── requirements.txt   # 의존성 패키지 목록
+├── extension/             # 크롬 확장 프로그램
+│   ├── manifest.json      # 확장 프로그램 설정
+│   ├── content.js         # 유튜브 페이지 삽입 로직
+│   ├── background.js      # 백그라운드 서비스 워커
+│   └── crossview.css      # 확장 프로그램 스타일
+├── web/                   # 분석 리포트 웹 페이지
+└── docs/                  # 기획 및 구현 계획 문서
 ```
 
 ---
 
 ## 🚀 시작하기
 
-### 요구 사항
-
-- Node.js 18 이상
-- Gemini API 키 ([Google AI Studio](https://aistudio.google.com)에서 발급)
-- YouTube Data API v3 키 ([Google Cloud Console](https://console.cloud.google.com)에서 발급)
-
-### 설치
+### 1. Backend 설정
 
 ```bash
-git clone https://github.com/your-team/crossview.git
-cd crossview
-npm install
+cd backend
+# 가상환경 생성 및 활성화
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS/Linux
+source .venv/bin/activate
+
+# 패키지 설치
+pip install -r requirements.txt
 ```
 
-### 환경 변수 설정
-
-`.env` 파일을 루트에 생성한다.
-
+`backend/.env` 파일을 생성하고 설정을 추가합니다.
 ```env
+AI_PROVIDER=gemini
 GEMINI_API_KEY=your_gemini_api_key_here
-YOUTUBE_API_KEY=your_youtube_api_key_here
+GEMINI_MODEL=gemini-2.0-flash-lite
 ```
 
-> ⚠️ API 키는 절대 코드에 직접 넣지 말 것. `.env`는 `.gitignore`에 포함되어 있다.
-
-### 실행
-
+서버 실행:
 ```bash
-npm run dev
+uvicorn app.main:app --reload --port 8000
 ```
 
-브라우저에서 `http://localhost:3000` 접속 후 유튜브 URL을 입력하면 분석이 시작된다.
+### 2. Extension 설치
+
+1. 브라우저에서 `chrome://extensions/` 접속
+2. 우측 상단의 **개발자 모드** 활성화
+3. **압축해제된 확장 프로그램을 로드합니다** 버튼 클릭
+4. 프로젝트의 `extension` 폴더 선택
 
 ---
 
 ## 🔍 사용 방법
 
-1. 
+1. 유튜브에서 시사/뉴스 영상을 재생합니다.
+2. 영상 우측(또는 하단)에 CrossView 패널이 나타납니다.
+3. **[분석 시작]** 버튼을 누르면 AI가 현재 영상의 내용을 분석합니다.
+4. 요약, 편향도, 댓글 반응, 그리고 다른 관점의 정보를 확인합니다.
 
 ---
 
-
 ## 🗺 로드맵
 
-| 단계 | 내용 |
-|---|---|
-| **데모 (현재)** | URL 입력 기반 웹 페이지, 핵심 4기능 검증 |
-| **v1.0** | 크롬 확장 프로그램, 유튜브 자막·댓글 자동 수집 |
-| **v1.5** | 같은 이슈 다른 관점 영상 추천 |
-| **v2.0** | 모바일 유튜브 공유 연동 |
+- [x] **v0.3.5**: Gemini API 연동 및 기본 UI 완성
+- [ ] **v0.5.0**: YouTube Data API를 통한 공식 자막/댓글 수집 안정화
+- [ ] **v0.7.0**: 검색 API(SerpApi 등) 연동을 통한 실시간 팩트체크 기사 연결
+- [ ] **v1.0.0**: 정식 배포 및 개인별 미디어 리터러시 히스토리 제공
 
 ---
 
 ## 👥 팀
-
 **CHUMMY**  
-해커톤 프로젝트 · 2026
+미디어 리터러시를 위한 AI 솔루션 프로젝트 (2026)
 
 ---
 
 ## 📄 라이선스
-
 MIT License
