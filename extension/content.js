@@ -304,19 +304,25 @@ function getFallbackAnalysis(context) {
 
 async function requestAnalysis(context) {
   try {
-    const response = await fetch(CROSSVIEW_BACKEND_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(context)
+    const response = await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        {
+          action: "analyze",
+          url: CROSSVIEW_BACKEND_URL,
+          data: context
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else if (!response.success) {
+            reject(new Error(response.error));
+          } else {
+            resolve(response.data);
+          }
+        }
+      );
     });
-
-    if (!response.ok) {
-      throw new Error(`Backend error: ${response.status}`);
-    }
-
-    return await response.json();
+    return response;
   } catch (error) {
     console.warn("CrossView backend unavailable. Using mock analysis.", error);
     return getFallbackAnalysis(context);
