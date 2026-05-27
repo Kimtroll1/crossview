@@ -17,7 +17,80 @@ class AIService:
     def __init__(self, provider: str = "mock"):
         self.provider = provider
 
+    async def _fetch_transcript_backend(self, video_id: str) -> str:
+        import asyncio
+        def get_transcript():
+            try:
+                from youtube_transcript_api import YouTubeTranscriptApi
+                api = YouTubeTranscriptApi()
+                transcript_list = api.fetch(video_id, languages=['ko', 'en'])
+                return "\n".join([item.text for item in transcript_list])
+            except Exception:
+                try:
+                    from youtube_transcript_api import YouTubeTranscriptApi
+                    api = YouTubeTranscriptApi()
+                    transcript_list_obj = api.list(video_id)
+                    for t in transcript_list_obj:
+                        transcript_list = t.fetch()
+                        return "\n".join([item.text for item in transcript_list])
+                except Exception:
+                    pass
+            return ""
+        return await asyncio.to_thread(get_transcript)
+
+    async def _fetch_comments_backend(self, video_id: str, api_key: str) -> str:
+        import asyncio
+        def get_comments():
+            try:
+                from googleapiclient.discovery import build
+                youtube = build('youtube', 'v3', developerKey=api_key)
+                request = youtube.commentThreads().list(
+                    part='snippet',
+                    videoId=video_id,
+                    maxResults=50,
+                    textFormat='plainText',
+                    order='relevance'
+                )
+                response = request.execute()
+                comments = []
+                for item in response.get('items', []):
+                    snippet = item.get('snippet', {})
+                    top_comment = snippet.get('topLevelComment', {})
+                    comment_text = top_comment.get('snippet', {}).get('textDisplay', '').strip()
+                    if comment_text:
+                        comments.append(comment_text)
+                return "\n".join([f"{i + 1}. {c}" for i, c in enumerate(comments)])
+            except Exception as e:
+                print(f"[CrossView] YouTube Data API failed to fetch comments: {e}")
+            return ""
+        return await asyncio.to_thread(get_comments)
+
     async def analyze_video(self, video: VideoContext) -> AnalysisResponse:
+        # Try fetching transcript on the backend if missing
+        if not video.transcript and video.videoId:
+            try:
+                fetched_transcript = await self._fetch_transcript_backend(video.videoId)
+                if fetched_transcript:
+                    video.transcript = fetched_transcript
+                    print(f"[CrossView] Backend successfully fetched transcript for video {video.videoId}")
+            except Exception as e:
+                print(f"[CrossView] Backend failed to fetch transcript: {e}")
+
+        # Try fetching comments via official API if YOUTUBE_API_KEY is configured
+        youtube_api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
+        if youtube_api_key and video.videoId:
+            try:
+                fetched_comments = await self._fetch_comments_backend(video.videoId, youtube_api_key)
+                if fetched_comments:
+                    video.commentsText = fetched_comments
+                    video.commentsCount = len(fetched_comments.split("\n"))
+                    print(f"[CrossView] Backend successfully fetched {video.commentsCount} comments via YouTube API")
+            except Exception as e:
+                print(f"[CrossView] Backend failed to fetch comments via YouTube API: {e}")
+
+        # Update analysis source based on actual contents used
+        video.analysisSource = self._source_used(video)
+
         if self.provider == "gemini":
             try:
                 return self._analyze_with_gemini(video)
