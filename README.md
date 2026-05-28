@@ -61,7 +61,8 @@ cd backend
 # 가상환경 생성 및 활성화
 python -m venv .venv
 # Windows
-.venv\Scripts\activate
+.\.venv\Scripts\activate
+uvicorn app.main:app --reload --port 8000
 # macOS/Linux
 source .venv/bin/activate
 
