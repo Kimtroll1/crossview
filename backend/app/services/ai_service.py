@@ -1,7 +1,10 @@
 \
+import asyncio
+import hashlib
 import json
 import os
 import re
+import time
 from urllib.parse import quote_plus
 
 from app.schemas.analysis import VideoContext, AnalysisResponse, Resource
@@ -14,11 +17,48 @@ POLITICAL_KEYWORDS = [
 
 
 class AIService:
+    _analysis_cache = {}
+    _inflight_analysis = {}
+    _analysis_cache_ttl_seconds = 120
+
     def __init__(self, provider: str = "mock"):
         self.provider = provider
 
+    def _cache_key(self, video: VideoContext) -> str:
+        fingerprint = "|".join(
+            [
+                self.provider,
+                video.videoId or "",
+                video.title or "",
+                video.channelName or "",
+                str(len(video.description or "")),
+                str(len(video.transcript or "")),
+                str(len(video.commentsText or "")),
+                video.analysisSource or "",
+                str(video.commentsCount or 0),
+            ]
+        )
+        return hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()
+
+    def _get_cached_analysis(self, cache_key: str):
+        cached = self._analysis_cache.get(cache_key)
+        if not cached:
+            return None
+
+        cached_at, response = cached
+        if time.monotonic() - cached_at > self._analysis_cache_ttl_seconds:
+            self._analysis_cache.pop(cache_key, None)
+            return None
+
+        return response
+
+    def _set_cached_analysis(self, cache_key: str, response: AnalysisResponse):
+        self._analysis_cache[cache_key] = (time.monotonic(), response)
+
+    async def _fetch_with_timeout(self, coro, timeout_seconds: int):
+        return await asyncio.wait_for(coro, timeout=timeout_seconds)
+
     async def _fetch_transcript_backend(self, video_id: str) -> str:
-        import asyncio
         def get_transcript():
             try:
                 from youtube_transcript_api import YouTubeTranscriptApi
@@ -39,7 +79,6 @@ class AIService:
         return await asyncio.to_thread(get_transcript)
 
     async def _fetch_comments_backend(self, video_id: str, api_key: str) -> str:
-        import asyncio
         def get_comments():
             try:
                 from googleapiclient.discovery import build
@@ -66,39 +105,82 @@ class AIService:
         return await asyncio.to_thread(get_comments)
 
     async def analyze_video(self, video: VideoContext) -> AnalysisResponse:
-        # Try fetching transcript on the backend if missing
-        if not video.transcript and video.videoId:
-            try:
-                fetched_transcript = await self._fetch_transcript_backend(video.videoId)
-                if fetched_transcript:
-                    video.transcript = fetched_transcript
-                    print(f"[CrossView] Backend successfully fetched transcript for video {video.videoId}")
-            except Exception as e:
-                print(f"[CrossView] Backend failed to fetch transcript: {e}")
+        cache_key = self._cache_key(video)
+        cached_response = self._get_cached_analysis(cache_key)
+        if cached_response is not None:
+            return cached_response
 
-        # Try fetching comments via official API if YOUTUBE_API_KEY is configured
-        youtube_api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
-        if youtube_api_key and video.videoId:
-            try:
-                fetched_comments = await self._fetch_comments_backend(video.videoId, youtube_api_key)
-                if fetched_comments:
-                    video.commentsText = fetched_comments
-                    video.commentsCount = len(fetched_comments.split("\n"))
-                    print(f"[CrossView] Backend successfully fetched {video.commentsCount} comments via YouTube API")
-            except Exception as e:
-                print(f"[CrossView] Backend failed to fetch comments via YouTube API: {e}")
+        inflight = self._inflight_analysis.get(cache_key)
+        if inflight is not None:
+            return await inflight
 
-        # Update analysis source based on actual contents used
-        video.analysisSource = self._source_used(video)
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        self._inflight_analysis[cache_key] = future
 
-        if self.provider == "gemini":
-            try:
-                return self._analyze_with_gemini(video)
-            except Exception as error:
-                print(f"[CrossView] Gemini failed. Falling back to mock. Error: {error}")
-                return self._mock_analyze(video)
+        try:
+            # Try fetching transcript on the backend if missing
+            fetch_tasks = {}
 
-        return self._mock_analyze(video)
+            if not video.transcript and video.videoId:
+                fetch_tasks["transcript"] = asyncio.create_task(
+                    self._fetch_with_timeout(
+                        self._fetch_transcript_backend(video.videoId),
+                        timeout_seconds=8,
+                    )
+                )
+
+            # Try fetching comments via official API if YOUTUBE_API_KEY is configured
+            youtube_api_key = os.getenv("YOUTUBE_API_KEY", "").strip()
+            if youtube_api_key and video.videoId:
+                fetch_tasks["comments"] = asyncio.create_task(
+                    self._fetch_with_timeout(
+                        self._fetch_comments_backend(video.videoId, youtube_api_key),
+                        timeout_seconds=8,
+                    )
+                )
+
+            if fetch_tasks:
+                results = await asyncio.gather(*fetch_tasks.values(), return_exceptions=True)
+                for name, result in zip(fetch_tasks.keys(), results):
+                    if isinstance(result, Exception):
+                        print(f"[CrossView] Backend failed to fetch {name}: {result}")
+                        continue
+
+                    if name == "transcript" and result:
+                        video.transcript = result
+                        print(f"[CrossView] Backend successfully fetched transcript for video {video.videoId}")
+                    elif name == "comments" and result:
+                        video.commentsText = result
+                        video.commentsCount = len(result.split("\n"))
+                        print(f"[CrossView] Backend successfully fetched {video.commentsCount} comments via YouTube API")
+
+            # Update analysis source based on actual contents used
+            video.analysisSource = self._source_used(video)
+
+            if self.provider == "gemini":
+                try:
+                    response = await asyncio.to_thread(self._analyze_with_gemini, video)
+                    self._set_cached_analysis(cache_key, response)
+                    future.set_result(response)
+                    return response
+                except Exception as error:
+                    print(f"[CrossView] Gemini failed. Falling back to mock. Error: {error}")
+                    response = self._mock_analyze(video)
+                    self._set_cached_analysis(cache_key, response)
+                    future.set_result(response)
+                    return response
+
+            response = self._mock_analyze(video)
+            self._set_cached_analysis(cache_key, response)
+            future.set_result(response)
+            return response
+        except Exception as error:
+            if not future.done():
+                future.set_exception(error)
+            raise
+        finally:
+            self._inflight_analysis.pop(cache_key, None)
 
     def _is_political(self, video: VideoContext) -> bool:
         text = f"{video.title} {video.description} {video.transcript} {video.commentsText}".lower()
