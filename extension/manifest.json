@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CrossView",
-  "version": "0.3.5",
+  "version": "0.5.0",
   "description": "유튜브 영상의 스크립트 기반 편향도, AI 의심 여부, 다른 관점 자료를 보여주는 미디어 리터러시 도구",
   "permissions": [
     "storage"
