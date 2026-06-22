@@ -115,5 +115,4 @@ uvicorn app.main:app --reload --port 8000
 ---
 
 ## 📄 라이선스
-본 프로젝트는 **GPL v3 (GNU General Public License v3)** 라이선스를 따릅니다. 
-본 소스코드를 인용, 복제, 또는 수정하여 사용하는 경우, 해당 저작물 역시 동일한 GPL v3 라이선스로 소스코드를 전면 공개해야 합니다. 상업적 독점 이용을 금지합니다.
+본 프로젝트는 **AGPL v3 (GNU Affero General Public License v3)** 라이선스를 따릅니다.
