@@ -18,7 +18,7 @@ CrossView는 유튜브 뉴스 및 시사 시청 중 발생할 수 있는 편향�
 ## 🛠 기술 스택
 
 ### Backend
-- **Language**: Python 3.10+
+- **Language**: Python 3.13
 - **Framework**: FastAPI
 - **AI**: Google Gemini (GenAI SDK)
 - **Deployment**: Render (준비됨)

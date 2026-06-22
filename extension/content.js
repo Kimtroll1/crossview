@@ -3,6 +3,10 @@ const CROSSVIEW_BACKEND_URL = window.CROSSVIEW_BACKEND_URL || "http://localhost:
 let currentUrl = location.href;
 let currentVideoId = "";
 let activeTheme = "auto";
+let analysisInFlight = false;
+let lastAutoAnalyzedVideoId = "";
+let bootTimer = null;
+let autoAnalyzeTimer = null;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -304,28 +308,58 @@ function getFallbackAnalysis(context) {
 
 async function requestAnalysis(context) {
   try {
-    const response = await new Promise((resolve, reject) => {
-      chrome.runtime.sendMessage(
-        {
-          action: "analyze",
-          url: CROSSVIEW_BACKEND_URL,
-          data: context
-        },
-        (response) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else if (!response.success) {
-            reject(new Error(response.error));
-          } else {
-            resolve(response.data);
+    console.debug("CrossView: starting direct fetch", CROSSVIEW_BACKEND_URL);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const response = await fetch(CROSSVIEW_BACKEND_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(context),
+      signal: controller.signal
+    }).finally(() => clearTimeout(timeoutId));
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    console.debug("CrossView: direct fetch succeeded");
+    return await response.json();
+  } catch (directFetchError) {
+    console.warn("CrossView: direct fetch failed, trying background bridge", directFetchError);
+    try {
+      console.debug("CrossView: starting background sendMessage fallback");
+      const response = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(
+          {
+            action: "analyze",
+            url: CROSSVIEW_BACKEND_URL,
+            data: context
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else if (!response.success) {
+              reject(new Error(response.error));
+            } else {
+              resolve(response.data);
+            }
           }
-        }
+        );
+      });
+      console.debug("CrossView: background fallback succeeded");
+      return response;
+    } catch (messagingError) {
+      console.warn(
+        "CrossView backend unavailable. Using mock analysis.",
+        directFetchError,
+        messagingError
       );
-    });
-    return response;
-  } catch (error) {
-    console.warn("CrossView backend unavailable. Using mock analysis.", error);
-    return getFallbackAnalysis(context);
+      return getFallbackAnalysis(context);
+    }
   }
 }
 
@@ -466,30 +500,8 @@ function buildPanel(context) {
 
         <div id="cv-result" class="cv-hidden">
           <div class="cv-card">
-            <p class="cv-section-title">📌 영상 요약</p>
-            <p class="cv-analysis-text" id="cv-summary-text"></p>
-
-            <div class="cv-divider"></div>
-
-            <p class="cv-section-title">주요 주장</p>
-            <ul class="cv-text-list" id="cv-main-claims"></ul>
-
-            <p class="cv-section-title">근거 요약</p>
-            <p class="cv-analysis-text" id="cv-evidence-summary"></p>
-
-            <p class="cv-section-title">주의해서 볼 표현/구조</p>
-            <ul class="cv-text-list" id="cv-caution-points"></ul>
-          </div>
-
-          <div class="cv-card">
             <p class="cv-section-title">분석 기준</p>
             <p class="cv-analysis-text" id="cv-source-detail"></p>
-          </div>
-
-          <div class="cv-card">
-            <p class="cv-section-title">💬 댓글 흐름</p>
-            <p class="cv-analysis-text" id="cv-comment-summary"></p>
-            <ul class="cv-text-list" id="cv-comment-warning-list"></ul>
           </div>
 
           <div class="cv-card cv-hidden" id="cv-bias-card">
@@ -520,6 +532,28 @@ function buildPanel(context) {
             <button class="cv-button cv-secondary" id="cv-force-bias-btn">
               정치 성향도 참고로 보기
             </button>
+          </div>
+
+          <div class="cv-card">
+            <p class="cv-section-title">💬 댓글 흐름</p>
+            <p class="cv-analysis-text" id="cv-comment-summary"></p>
+            <ul class="cv-text-list" id="cv-comment-warning-list"></ul>
+          </div>
+
+          <div class="cv-card">
+            <p class="cv-section-title">📌 영상 요약</p>
+            <p class="cv-analysis-text" id="cv-summary-text"></p>
+
+            <div class="cv-divider"></div>
+
+            <p class="cv-section-title">주요 주장</p>
+            <ul class="cv-text-list" id="cv-main-claims"></ul>
+
+            <p class="cv-section-title">근거 요약</p>
+            <p class="cv-analysis-text" id="cv-evidence-summary"></p>
+
+            <p class="cv-section-title">주의해서 볼 표현/구조</p>
+            <ul class="cv-text-list" id="cv-caution-points"></ul>
           </div>
 
           <div class="cv-card">
@@ -694,24 +728,31 @@ async function runAnalysis() {
   const analyzeButton = document.querySelector("#cv-analyze-btn");
   const status = document.querySelector("#cv-status");
   if (!analyzeButton || !status) return;
+  if (analysisInFlight) return;
 
+  analysisInFlight = true;
   analyzeButton.disabled = true;
-  status.textContent = "최신 영상 정보를 다시 불러오는 중입니다...";
 
-  const freshContext = await getFreshYouTubeContextWithRetry();
-  updateCurrentVideoCard(freshContext);
-  status.textContent = `"${freshContext.title || "현재 영상"}"을 스크립트/설명 기반으로 분석하는 중입니다...`;
+  try {
+    status.textContent = "최신 영상 정보를 다시 불러오는 중입니다...";
 
-  const analysis = await requestAnalysis(freshContext);
+    const freshContext = await getFreshYouTubeContextWithRetry();
+    updateCurrentVideoCard(freshContext);
+    status.textContent = `"${freshContext.title || "현재 영상"}"을 스크립트/설명 기반으로 분석하는 중입니다...`;
 
-  updatePanelWithAnalysis(analysis);
+    const analysis = await requestAnalysis(freshContext);
 
-  const usedSource = String(analysis.sourceUsed || "");
-  status.textContent =
-    usedSource.includes("transcript")
-      ? "스크립트 기반 분석 완료. 결과는 참고용이며 추가 확인이 필요합니다."
-      : "스크립트가 감지되지 않아 설명/메타데이터 중심으로 분석했습니다.";
-  analyzeButton.disabled = false;
+    updatePanelWithAnalysis(analysis);
+
+    const usedSource = String(analysis.sourceUsed || "");
+    status.textContent =
+      usedSource.includes("transcript")
+        ? "스크립트 기반 분석 완료. 결과는 참고용이며 추가 확인이 필요합니다."
+        : "스크립트가 감지되지 않아 설명/메타데이터 중심으로 분석했습니다.";
+  } finally {
+    analyzeButton.disabled = false;
+    analysisInFlight = false;
+  }
 }
 
 async function injectCrossViewPanel({ autoAnalyze = true } = {}) {
@@ -757,8 +798,10 @@ async function injectCrossViewPanel({ autoAnalyze = true } = {}) {
 
   document.querySelector("#cv-analyze-btn").addEventListener("click", runAnalysis);
 
-  if (autoAnalyze) {
-    setTimeout(runAnalysis, 600);
+  if (autoAnalyze && currentVideoId !== lastAutoAnalyzedVideoId) {
+    lastAutoAnalyzedVideoId = currentVideoId;
+    if (autoAnalyzeTimer) clearTimeout(autoAnalyzeTimer);
+    autoAnalyzeTimer = setTimeout(runAnalysis, 600);
   }
 }
 
@@ -780,7 +823,9 @@ const observer = new MutationObserver(() => {
   if (location.href !== currentUrl || nextVideoId !== currentVideoId) {
     currentUrl = location.href;
     currentVideoId = nextVideoId;
-    setTimeout(boot, 900);
+    lastAutoAnalyzedVideoId = "";
+    if (bootTimer) clearTimeout(bootTimer);
+    bootTimer = setTimeout(boot, 900);
     return;
   }
 
