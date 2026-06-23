@@ -52,7 +52,7 @@ def health():
         "provider": settings.ai_provider,
         "model": settings.gemini_model if settings.ai_provider == "gemini" else "mock",
         "youtubeSearch": bool(settings.youtube_api_key),
-        "webSearch": bool(settings.ai_provider == "gemini" and settings.gemini_api_key and settings.enable_gemini_search),
+        "webSearch": True,
         "urlContext": bool(settings.ai_provider == "gemini" and settings.gemini_api_key and settings.enable_url_context),
         "emailDelivery": bool(settings.resend_api_key),
     }

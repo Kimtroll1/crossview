@@ -5,6 +5,8 @@ import json
 import re
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from app.config import settings
 from app.schemas.analysis import (
     AnalysisResponse,
@@ -19,6 +21,28 @@ POLITICAL_KEYWORDS = [
     "정치", "대통령", "국회", "정부", "여당", "야당", "보수", "진보", "좌파", "우파",
     "선거", "정당", "의원", "민주당", "국민의힘", "정책", "탄핵", "외교", "안보",
 ]
+
+
+class GeminiAnalysisDraft(BaseModel):
+    summary: str = ""
+    mainClaims: list[str] = Field(default_factory=list)
+    evidenceSummary: str = ""
+    cautionPoints: list[str] = Field(default_factory=list)
+    commentMood: str = ""
+    commentIntensity: str = ""
+    commentLeaning: str = ""
+    commentWarningSignals: list[str] = Field(default_factory=list)
+    isPolitical: bool = False
+    biasScore: int = 0
+    biasLabel: str = ""
+    biasSummary: str = ""
+    biasCriteria: list[str] = Field(default_factory=list)
+    biasConfidence: float = 0.0
+    aiRisk: str = "low"
+    aiSummary: str = ""
+    issue: str = ""
+    searchQueries: SearchQueries = Field(default_factory=SearchQueries)
+    checklist: list[str] = Field(default_factory=list)
 
 
 class AIService:
@@ -132,11 +156,27 @@ class AIService:
             contents=self._build_prompt(video),
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
+                response_schema=GeminiAnalysisDraft,
                 temperature=0.1,
             ),
         )
-        data = self._parse_json(getattr(response, "text", "") or "")
-        return self._normalize(data, video)
+        draft = getattr(response, "parsed", None)
+        if isinstance(draft, GeminiAnalysisDraft):
+            data = draft.model_dump()
+        else:
+            raw_text = getattr(response, "text", "") or ""
+            data = self._parse_json(raw_text)
+            if not isinstance(data, dict):
+                raise ValueError("Gemini returned an unexpected response shape")
+
+        response = self._normalize(data, video)
+        return response.model_copy(
+            update={
+                "analysisProvider": "gemini",
+                "analysisModel": settings.gemini_model,
+                "promptVersion": settings.prompt_version,
+            }
+        )
 
     def _build_prompt(self, video: VideoContext) -> str:
         source_used = self._source_used(video)
@@ -225,6 +265,35 @@ JSON 형식:
   "checklist": ["사용자가 확인할 질문"]
 }}
 """
+
+    def _build_prompt(self, video: VideoContext) -> str:
+        source_used = self._source_used(video)
+        source_label = self._source_label(source_used, video.commentsCount)
+        description = (video.description or "").strip()[:5000]
+        transcript = (video.transcript or "").strip()[:12000]
+        comments = (video.commentsText or "").strip()[:6000]
+
+        return f"""
+Return ONLY valid JSON matching the schema.
+Do not include markdown, code fences, commentary, or extra text.
+If evidence is weak, say so plainly.
+
+Title: {video.title}
+Channel: {video.channelName}
+URL: {video.url}
+Video ID: {video.videoId}
+Source: {source_label}
+Source used: {source_used}
+
+Description:
+{description}
+
+Transcript:
+{transcript}
+
+Comments:
+{comments}
+""".strip()
 
     def _normalize(self, data: dict[str, Any], video: VideoContext) -> AnalysisResponse:
         source_used = self._source_used(video)
@@ -374,11 +443,42 @@ JSON 형식:
             value = json.loads(clean)
             return value if isinstance(value, dict) else {}
         except json.JSONDecodeError:
-            match = re.search(r"\{.*\}", clean, re.DOTALL)
-            if not match:
-                raise
-            value = json.loads(match.group(0))
-            return value if isinstance(value, dict) else {}
+            start = clean.find("{")
+            if start == -1:
+                return {}
+
+            depth = 0
+            in_string = False
+            escaped = False
+            end = -1
+            for index, char in enumerate(clean[start:], start=start):
+                if escaped:
+                    escaped = False
+                    continue
+                if char == "\\" and in_string:
+                    escaped = True
+                    continue
+                if char == '"':
+                    in_string = not in_string
+                    continue
+                if in_string:
+                    continue
+                if char == "{":
+                    depth += 1
+                elif char == "}":
+                    depth -= 1
+                    if depth == 0:
+                        end = index + 1
+                        break
+
+            if end == -1:
+                return {}
+
+            try:
+                value = json.loads(clean[start:end])
+                return value if isinstance(value, dict) else {}
+            except Exception:
+                return {}
 
     @staticmethod
     def _string_list(value: Any, limit: int) -> list[str]:
