@@ -1,8 +1,8 @@
-# CrossView 2.0
+# CrossView
 
 > 유튜브 영상의 정치 방향과 편향 신호를 시청 중 보여주고, 실제 다른 관점 자료와 개인 미디어 소비 리포트까지 연결하는 서비스
 
-CrossView 2.0은 **Chrome Extension + FastAPI + PostgreSQL + Next.js**로 구성됩니다.
+CrossView는 **Chrome Extension + FastAPI + PostgreSQL + Next.js**로 구성됩니다.
 
 ## 핵심 기능
 
