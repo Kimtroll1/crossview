@@ -32,12 +32,14 @@ class GeminiAnalysisDraft(BaseModel):
     commentIntensity: str = ""
     commentLeaning: str = ""
     commentWarningSignals: list[str] = Field(default_factory=list)
+    commentFlow: CommentFlow = Field(default_factory=CommentFlow)
     isPolitical: bool = False
     biasScore: int = 0
     biasLabel: str = ""
     biasSummary: str = ""
     biasCriteria: list[str] = Field(default_factory=list)
     biasConfidence: float = 0.0
+    biasSignals: BiasSignals = Field(default_factory=BiasSignals)
     aiRisk: str = "low"
     aiSummary: str = ""
     issue: str = ""
