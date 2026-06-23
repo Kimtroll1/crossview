@@ -274,9 +274,9 @@ JSON 형식:
         comments = (video.commentsText or "").strip()[:6000]
 
         return f"""
-Return ONLY valid JSON matching the schema.
-Do not include markdown, code fences, commentary, or extra text.
-If evidence is weak, say so plainly.
+스키마와 일치하는 유효한 JSON만 반환하세요.
+마크다운, 코드 펜스, 주석 또는 추가 텍스트를 포함하지 마세요.
+증거가 불충분하다면 솔직하게 그렇다고 밝히세요.
 
 Title: {video.title}
 Channel: {video.channelName}
