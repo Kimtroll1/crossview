@@ -1,14 +1,103 @@
+databases:
+  - name: crossview-db
+    databaseName: crossview
+    user: crossview
+    region: singapore
+
 services:
   - type: web
     name: crossview-api
     runtime: python
     rootDir: backend
+    region: singapore
     buildCommand: pip install -r requirements.txt
     startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
     envVars:
+      - key: APP_VERSION
+        value: 2.0.0
+      - key: ENVIRONMENT
+        value: production
       - key: AI_PROVIDER
         value: gemini
       - key: GEMINI_MODEL
         value: gemini-3.1-flash-lite
+      - key: GEMINI_SEARCH_MODEL
+        value: gemini-3.1-flash-lite
+      - key: ENABLE_GEMINI_SEARCH
+        value: true
+      - key: ENABLE_URL_CONTEXT
+        value: true
+      - key: RESOURCE_CACHE_HOURS
+        value: 24
+      - key: PROMPT_VERSION
+        value: crossview-bias-v2
       - key: GEMINI_API_KEY
         sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SECRETS_ENCRYPTION_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: REPORT_FROM_EMAIL
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crossview-db
+          property: connectionString
+
+  - type: web
+    name: crossview-report
+    runtime: node
+    rootDir: frontend
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: npm run start -- -p $PORT
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
+        sync: false
+
+  - type: cron
+    name: crossview-report-sender
+    runtime: python
+    rootDir: backend
+    region: singapore
+    schedule: "0 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/send_due_reports.py
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crossview-db
+          property: connectionString
+      - key: FRONTEND_URL
+        fromService:
+          name: crossview-api
+          type: web
+          envVarKey: FRONTEND_URL
+      - key: SECRETS_ENCRYPTION_KEY
+        fromService:
+          name: crossview-api
+          type: web
+          envVarKey: SECRETS_ENCRYPTION_KEY
+      - key: RESEND_API_KEY
+        fromService:
+          name: crossview-api
+          type: web
+          envVarKey: RESEND_API_KEY
+      - key: REPORT_FROM_EMAIL
+        fromService:
+          name: crossview-api
+          type: web
+          envVarKey: REPORT_FROM_EMAIL

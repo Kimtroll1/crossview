@@ -1,33 +1,20 @@
 {
   "manifest_version": 3,
   "name": "CrossView",
-  "version": "0.5.0",
-  "description": "유튜브 영상의 스크립트 기반 편향도, AI 의심 여부, 다른 관점 자료를 보여주는 미디어 리터러시 도구",
-  "permissions": [
-    "storage"
-  ],
+  "version": "2.0.0",
+  "description": "유튜브 영상의 정치 방향과 편향 신호를 시각화하고 실제 다관점 자료와 개인 리포트를 연결합니다.",
+  "permissions": ["storage"],
   "host_permissions": [
     "https://www.youtube.com/*",
     "http://localhost:8000/*",
     "http://127.0.0.1:8000/*",
     "https://*.onrender.com/*"
   ],
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "https://www.youtube.com/watch*"
-      ],
-      "js": [
-        "config.js",
-        "content.js"
-      ],
-      "css": [
-        "crossview.css"
-      ],
-      "run_at": "document_idle"
-    }
-  ]
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{
+    "matches": ["https://www.youtube.com/watch*"],
+    "js": ["config.js", "content.js"],
+    "css": ["crossview.css"],
+    "run_at": "document_idle"
+  }]
 }

@@ -1,62 +1,38 @@
-# CrossView v3 구현 계획
+# CrossView 2.0 구현 상태
 
-## 이번 버전에 반영된 요구사항
+## 이번 버전 완료
 
-- Gemini API 실제 연동
-- `.env`에서 `AI_PROVIDER=gemini`로 바꾸면 Gemini 분석 사용
-- API 키가 없거나 호출 실패 시 mock 분석으로 자동 fallback
-- 분석 결과는 JSON으로 받아 Extension UI에 그대로 표시
-- 정치 영상이 아니면 정치 편향도 바를 기본으로 숨김
-- 사용자가 원하면 정치 편향도 바를 강제로 볼 수 있음
-- 비슷한 관점, 다른 관점, 검증용 자료는 유튜브뿐 아니라 기사/웹 자료도 포함
-- 자료가 없을 경우 AI 답변/확인 질문 제공
+- 확장 UI 순서 개편: 정치 방향 → 편향 신호 → 댓글 → 다관점 자료 → 요약
+- 편향 신호 4종과 판단 근거
+- 댓글 의견 쏠림·감정 강도
+- YouTube Data API 실제 영상 검색
+- Gemini Search grounding 실제 웹 출처 검색
+- Gemini URL Context 공개 문서 내용 확인
+- `videoId` 분석 캐시와 24시간 검색 캐시
+- 로컬 계정 및 Google 로그인 구조
+- 웹·확장 프로그램 6자리 연결 코드
+- 사용자별 시청 기록과 추천 자료 클릭 기록
+- 주간·월간 개인 리포트
+- 이메일·Slack·Discord 전송 설정
+- 시간별 Cron 전송 작업
+- Backend 통합 테스트와 Frontend production build
 
-## 실행 순서
+## 운영 전 필요한 외부 설정
 
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+- Gemini API 키
+- YouTube Data API 키
+- Google OAuth Client ID(선택)
+- Resend API 키와 인증된 발신 도메인(이메일 사용 시)
+- Slack/Discord Incoming Webhook(각 사용자 설정)
+- 운영용 PostgreSQL
+- HTTPS 배포 주소와 Chrome Extension host permission
 
-Windows:
+## 후속 고도화
 
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-`backend/.env` 생성:
-
-```env
-AI_PROVIDER=gemini
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash-lite
-```
-
-서버 실행:
-
-```bash
-uvicorn app.main:app --reload --port 8000
-```
-
-## 다음 해야 할 일
-
-1. 실제 YouTube Transcript 수집 강화
-2. YouTube Data API로 댓글 수집
-3. Gemini 프롬프트 평가 및 개선
-4. SerpApi/검색 API로 기사 검색 연결
-5. 사용자별 기록 저장
-6. 웹 리포트 실제 데이터 연결
-
-
-## v3.3 반영 사항
-
-- 영상 요약을 패널 최상단에 표시한다.
-- 댓글 흐름 분석을 별도 카드로 표시한다.
-- 분석 기준에 스크립트/댓글/설명 포함 여부를 표시한다.
-- 현재 버전의 댓글 수집은 YouTube 페이지에 화면상 로드된 댓글만 감지한다.
-- 다음 단계에서는 YouTube Data API `commentThreads.list`로 댓글 수집을 안정화해야 한다.
+1. 전문가가 라벨링한 편향 평가 데이터셋
+2. 모델별 반복 결과와 사람 평가 비교 대시보드
+3. Alembic 정식 마이그레이션
+4. 계정 삭제·데이터 내보내기·보존 정책
+5. 영상 프레임·음성 기반 합성 미디어 탐지 모델
+6. 검색 품질 A/B 테스트와 출처별 신뢰 정책
+7. 다국어 분석
