@@ -98,7 +98,6 @@ docker ps
 ```powershell
 cd backend
 python -m venv .venv
-Copy-Item .env.example .env
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 ```
@@ -117,7 +116,6 @@ http://localhost:8000/api/health
 
 ```powershell
 cd frontend
-Copy-Item .env.local.example .env.local
 npm.cmd install
 npm.cmd run dev
 ```
