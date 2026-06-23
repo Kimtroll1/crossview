@@ -69,7 +69,7 @@ CrossView는 **Chrome Extension + FastAPI + PostgreSQL + Next.js**로 구성됩�
 ## 프로젝트 구조
 
 ```text
-crossview-complete/
+crossview/
 ├─ backend/          FastAPI, Gemini, YouTube API, 인증, DB, 정기 전송
 ├─ extension/        Chrome Manifest V3 확장 프로그램
 ├─ frontend/         Next.js 로그인·리포트·설정 화면
