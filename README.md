@@ -234,6 +234,14 @@ node --check extension/content.js
 - 운영 환경에서는 HTTPS API 주소를 `extension/config.js`에 설정하세요.
 - Webhook URL은 서버에서 암호화해 저장하며 브라우저에는 마스킹된 값만 반환합니다.
 
+## 라이선스
+
+이 프로젝트는 **GNU Affero General Public License v3.0 (AGPL-3.0)**에 따라 라이선스가 부여됩니다. 
+
+- 이 서비스를 수정하여 네트워크(웹 서비스 등)를 통해 사용자에게 제공하는 경우, **수정된 백엔드 및 프론트엔드 전체 소스 코드를 동일한 AGPL-3.0 라이선스로 공개**해야 합니다.
+- 크롬 확장 프로그램(Extension)을 수정하여 배포하는 경우에도 소스 코드가 공개되어야 합니다.
+- 자세한 내용은 [LICENSE](./LICENSE) 파일을 참고하세요.
+
 ## 팀
 
 CHUMMY · CrossView · 2026
